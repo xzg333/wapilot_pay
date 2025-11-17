@@ -1,7 +1,11 @@
+import { upgradeWebSocket } from "hono/cloudflare-workers";
+
 const { Hono } = require("hono");
 const { env } = require("hono/adapter");
 const Stripe = require("stripe");
 const app = new Hono();
+
+const connections = new Map();
 /**
  * Setup Stripe SDK prior to handling a request
  */
@@ -46,25 +50,34 @@ app.post("/v1/pay", async (context) => {
     //   signature,
     //   STRIPE_WEBHOOK_SECRET
     // );
-    const event = await context.req.json();
+    const event = await context.req.json()
     const id = event.id;
     const deviceId = event.data.object.client_reference_id;
-    let licenseKey = '';
+    // let licenseKey = '';
     switch (event.type) {
-      case "payment_intent.created": {
+      case "payment_intent.succeeded": {
         // 获取激活码
         const response = await fetch(`https://generater.luoyutao1028.workers.dev/encrypt?deviceId=${deviceId}`);
         const license = await response.text();
-        licenseKey = license;
+        // licenseKey = license;
         // 支付成功，存储至D1数据库
         await db.prepare(
           "INSERT INTO [order] (id, order_id, device_id, order_info, license) VALUES (?, ?, ?, ?, ?)"
         ).bind(id, id, deviceId, JSON.stringify(event.data.object), license).run();
+        const ws = connections.get(deviceId);
+        setTimeout(() => {
+          if (ws) {
+            ws.send(JSON.stringify({ deviceId, license, id, type: event.type }));
+            ws.close();
+          }
+        }, 500);
+
+        break;
       }
       default:
         break
     }
-    return context.json({ licenseKey, deviceId, id, type: event.type }, 200)
+    return context.text('', 200)
   } catch (error) {
     const errorMessage = `⚠️  Webhook signature verification failed. ${err instanceof Error ? err.message : "Internal server error"}`
     console.log(errorMessage);
@@ -72,13 +85,28 @@ app.post("/v1/pay", async (context) => {
   }
 })
 
-app.post('/v1/checkPay/', async (context) => {
+app.get('/v1/checkPay', async (context) => {
   try {
-    const db = context.get('db');
 
+    const db = context.get('db');
+    db.prepare(`
+      SELECT * FROM [order] WHERE device_id = ?`).bind()
   } catch (error) {
 
   }
 })
+
+app.get('/ws', upgradeWebSocket((c) => {
+  const deviceId = c.req.query('deviceId');
+  return {
+    onOpen(_, ws) {
+      connections.set(deviceId, ws);
+      ws.send('连接成功')
+    },
+    onClose() {
+      connections.delete(deviceId);
+    }
+  }
+}))
 
 export default app;
