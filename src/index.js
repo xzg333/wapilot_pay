@@ -1,4 +1,3 @@
-import { upgradeWebSocket } from "hono/cloudflare-workers";
 
 const { Hono } = require("hono");
 const { env } = require("hono/adapter");
@@ -65,12 +64,6 @@ app.post("/v1/pay", async (context) => {
         await db.prepare(
           "INSERT INTO [order] (id, order_id, device_id, order_info, license) VALUES (?, ?, ?, ?, ?)"
         ).bind(id, id, deviceId, JSON.stringify(event.data.object), license).run();
-        const ws = connections.get(deviceId);
-        if (ws) {
-          haveWs = true;
-          ws.send(JSON.stringify({ deviceId, license, id, type: event.type }));
-        }
-
         break;
       }
       default:
@@ -90,24 +83,11 @@ app.get('/v1/checkPay', async (context) => {
     const db = context.get('db');
     const result = await db.prepare(`
       SELECT * FROM [order] WHERE device_id = ?`).bind(deviceId).run();
-    return context.json(result, 200)
+    return context.json({ data: result, code: 200, deviceId }, 200)
   } catch (error) {
     return context.json({ msg: error.message, code: 500 }, 200)
   }
 })
 
-app.get('/ws', upgradeWebSocket((c) => {
-  const deviceId = c.req.query('deviceId');
-  return {
-    onMessage(event, ws) {
-      console.log("收到消息:", event.data)
-      if (!connections.get(deviceId))
-        connections.set(deviceId, ws);
-    },
-    onClose() {
-      connections.delete(deviceId);
-    }
-  }
-}))
 
 export default app;
