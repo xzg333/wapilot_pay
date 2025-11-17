@@ -11,6 +11,7 @@
   "author": "{{ authors }}",
   "license": "MIT",
   "dependencies": {
+    "express": "^5.1.0",
     "hono": "^4.3.11",
     "stripe": "^15.8.0"
   },
