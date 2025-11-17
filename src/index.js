@@ -34,22 +34,23 @@ app.use('*', async (context, next) => {
 
 app.post("/v1/pay", async (context) => {
   // 获取stripe secret
-  const { STRIPE_WEBHOOK_SECRET } = env(context);
+  // const { STRIPE_WEBHOOK_SECRET } = env(context);
+  const STRIPE_WEBHOOK_SECRET = 'whsec_v5JtI0UXrmS28YgMQINCiMD7bo3hk2aM'
   try {
     // 获取数据库
     const db = context.get('db');
-    // const stripe = context.get('stripe');
-    // const signature = context.req.raw.headers.get("stripe-signature");
-    // if (!signature) {
-    //   return context.text("", 400);
-    // }
-    // const body = await context.req.text();
-    // const event = await stripe.webhooks.constructEventAsync(
-    //   body,
-    //   signature,
-    //   STRIPE_WEBHOOK_SECRET
-    // );
-    const event = await context.req.json()
+    const stripe = context.get('stripe');
+    const signature = context.req.raw.headers.get("stripe-signature");
+    if (!signature) {
+      return context.text("", 400);
+    }
+    const body = await context.req.text();
+    const event = await stripe.webhooks.constructEventAsync(
+      body,
+      signature,
+      STRIPE_WEBHOOK_SECRET
+    );
+    // const event = await context.req.json()
     const id = event.id;
     const deviceId = event.data.object.client_reference_id;
     let licenseKey = '';
@@ -78,7 +79,7 @@ app.post("/v1/pay", async (context) => {
     return context.text(``, 200)
   } catch (error) {
     const errorMessage = `⚠️  Webhook signature verification failed. ${err instanceof Error ? err.message : "Internal server error"}`
-    console.log(errorMessage);
+    console.log('errorMessage', errorMessage);
     return context.text(errorMessage, 400);
   }
 })
