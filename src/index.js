@@ -65,8 +65,8 @@ app.post("/v1/pay", async (context) => {
         const response = await fetch(`https://generater.luoyutao1028.workers.dev/encrypt?deviceId=${deviceId}`);
         const license = await response.text();
         licenseKey = license;
+        console.log('cdk', licenseKey)
         // 支付成功，存储至D1数据库
-
         break;
       }
       default:
@@ -89,9 +89,9 @@ app.get('/v1/checkPay', async (context) => {
     const db = context.get('db');
     const result = await db.prepare(`
       SELECT 
-        deviceId as device_id,
+        device_id as deviceId,
         license,
-        orderId as order_id,
+        order_id as orderId,
         created_at as createdAt,
         type
       FROM [order] WHERE device_id = ?`).bind(deviceId).run();
