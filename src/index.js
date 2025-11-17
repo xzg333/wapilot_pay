@@ -1,32 +1,32 @@
 const { Hono } = require("hono");
-const { env } = require("hono/adapter");
-const Stripe = require("stripe");
+// const { env } = require("hono/adapter");
+const stripe = require("stripe");
 const app = new Hono();
 
 /**
  * Setup Stripe SDK prior to handling a request
  */
-app.use('*', async (context, next) => {
-  // Load the Stripe API key from context.
-  const { STRIPE_API_KEY: stripeKey } = env(context);
+// app.use('*', async (context, next) => {
+//   // // Load the Stripe API key from context.
+//   // const { STRIPE_API_KEY: stripeKey } = env(context);
 
-  // Instantiate the Stripe client object 
-  const stripe = new Stripe(stripeKey, {
-    appInfo: {
-      // For sample support and debugging, not required for production:
-      name: "stripe-samples/stripe-node-cloudflare-worker-template",
-      version: "0.0.1",
-      url: "https://github.com/stripe-samples"
-    },
-    maxNetworkRetries: 3,
-    timeout: 30 * 1000,
-  });
+//   // // Instantiate the Stripe client object 
+//   // const stripe = new Stripe(stripeKey, {
+//   //   appInfo: {
+//   //     // For sample support and debugging, not required for production:
+//   //     name: "stripe-samples/stripe-node-cloudflare-worker-template",
+//   //     version: "0.0.1",
+//   //     url: "https://github.com/stripe-samples"
+//   //   },
+//   //   maxNetworkRetries: 3,
+//   //   timeout: 30 * 1000,
+//   // });
 
-  // Set the Stripe client to the Variable context object
-  context.set("stripe", stripe);
+//   // // Set the Stripe client to the Variable context object
+//   // context.set("stripe", stripe);
 
-  await next();
-});
+//   await next();
+// });
 
 
 // app.get("/", async (context) => {
@@ -63,7 +63,8 @@ app.use('*', async (context, next) => {
 
 app.post("/v1/pay", async (context) => {
   // Load the Stripe API key from context.
-  const { STRIPE_WEBHOOK_SECRET } = env(context);
+  // const { STRIPE_WEBHOOK_SECRET } = env(context);
+  const STRIPE_WEBHOOK_SECRET = 'whsec_v5JtI0UXrmS28YgMQINCiMD7bo3hk2aM'
   /**
    * Load the Stripe client from the context
    */
