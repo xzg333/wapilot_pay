@@ -29,44 +29,48 @@ app.use('*', async (context, next) => {
 });
 
 
-app.get("/", async (context) => {
-  /**
-   * Load the Stripe client from the context
-   */
-  const stripe = context.get('stripe');
-  /*
-   * Sample checkout integration which redirects a customer to a checkout page
-   * for the specified line items.
-   *
-   * See https://stripe.com/docs/payments/accept-a-payment?integration=checkout.
-   */
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card"],
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: "T-shirt",
-          },
-          unit_amount: 2000,
-        },
-        quantity: 1,
-      },
-    ],
-    mode: "payment",
-    success_url: "https://example.com/success",
-    cancel_url: "https://example.com/cancel",
-  });
-  return context.redirect(session.url, 303);
-});
+// app.get("/", async (context) => {
+//   /**
+//    * Load the Stripe client from the context
+//    */
+//   const stripe = context.get('stripe');
+//   /*
+//    * Sample checkout integration which redirects a customer to a checkout page
+//    * for the specified line items.
+//    *
+//    * See https://stripe.com/docs/payments/accept-a-payment?integration=checkout.
+//    */
+//   const session = await stripe.checkout.sessions.create({
+//     payment_method_types: ["card"],
+//     line_items: [
+//       {
+//         price_data: {
+//           currency: "usd",
+//           product_data: {
+//             name: "T-shirt",
+//           },
+//           unit_amount: 2000,
+//         },
+//         quantity: 1,
+//       },
+//     ],
+//     mode: "payment",
+//     success_url: "https://example.com/success",
+//     cancel_url: "https://example.com/cancel",
+//   });
+//   return context.redirect(session.url, 303);
+// });
 
-app.post("/webhook", async (context) => {
+app.post("/v1/pay", async (context) => {
   // Load the Stripe API key from context.
   const { STRIPE_WEBHOOK_SECRET } = env(context);
   /**
    * Load the Stripe client from the context
    */
+  const id = Math.floor(Math.random() * (100 - 0 + 1)) + 0;
+  await env.WAPILOT.prepare(
+    "INSERT INTO [order] (id, order_id, device_id, order_info) VALUES (?, ?, ?, ?)"
+  ).bind(id, "测试id", "测试id", '测试数据').run();
   const stripe = context.get('stripe');
   const signature = context.req.raw.headers.get("stripe-signature");
   try {
