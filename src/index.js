@@ -60,7 +60,7 @@ app.post("/v1/pay", async (context) => {
     // }
 
     switch (event.type) {
-      case "payment_intent.succeeded": {
+      case "checkout.session.completed": {
         // 获取激活码
         const response = await fetch(`https://generater.luoyutao1028.workers.dev/encrypt?deviceId=${deviceId}`);
         const license = await response.text();

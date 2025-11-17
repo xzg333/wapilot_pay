@@ -4,6 +4,9 @@ d1_databases = [
   { binding = "WAPILOT", database_name = "wapilot_order", database_id = "0c13e227-f9e0-4cb4-99cc-781825834d35" },
 ]
 [observability]
+enabled = true
+head_sampling_rate = 1
+
 [observability.logs]
 enabled = true
 head_sampling_rate = 1
