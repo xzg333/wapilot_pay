@@ -38,21 +38,27 @@ app.post("/v1/pay", async (context) => {
   try {
     // 获取数据库
     const db = context.get('db');
-    const stripe = context.get('stripe');
-    const signature = context.req.raw.headers.get("stripe-signature");
-    if (!signature) {
-      return context.text("", 400);
-    }
-    const body = await context.req.text();
-    const event = await stripe.webhooks.constructEventAsync(
-      body,
-      signature,
-      STRIPE_WEBHOOK_SECRET
-    );
-    // const event = await context.req.json()
+    // const stripe = context.get('stripe');
+    // const signature = context.req.raw.headers.get("stripe-signature");
+    // if (!signature) {
+    //   return context.text("", 400);
+    // }
+    // const body = await context.req.text();
+    // const event = await stripe.webhooks.constructEventAsync(
+    //   body,
+    //   signature,
+    //   STRIPE_WEBHOOK_SECRET
+    // );
+    const event = await context.req.json()
     const id = event.id;
     const deviceId = event.data.object.client_reference_id;
     let licenseKey = '';
+    // // 先查询是否存在
+    // const { results } = await db.prepare(`SELECT * FROM [order] WHERE id = ?`).bind(id).run();
+    // if (results.length == 0) {
+
+    // }
+
     switch (event.type) {
       case "payment_intent.succeeded": {
         // 获取激活码
