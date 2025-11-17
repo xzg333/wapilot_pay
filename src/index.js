@@ -29,83 +29,56 @@ app.use('*', async (context, next) => {
 });
 
 
-app.get("/", async (context) => {
-  console.log('context', context)
-  /**
-   * Load the Stripe client from the context
-   */
-  const stripe = context.get('stripe');
-  /*
-   * Sample checkout integration which redirects a customer to a checkout page
-   * for the specified line items.
-   *
-   * See https://stripe.com/docs/payments/accept-a-payment?integration=checkout.
-   */
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card"],
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: "T-shirt",
-          },
-          unit_amount: 2000,
-        },
-        quantity: 1,
-      },
-    ],
-    mode: "payment",
-    success_url: "https://example.com/success",
-    cancel_url: "https://example.com/cancel",
-  });
-  return context.redirect(session.url, 303);
-});
-
 app.post("/v1/pay", async (context) => {
-  // Load the Stripe API key from context.
-  // const { STRIPE_WEBHOOK_SECRET } = env(context);
-  const STRIPE_WEBHOOK_SECRET = 'whsec_v5JtI0UXrmS28YgMQINCiMD7bo3hk2aM'
-  /**
-   * Load the Stripe client from the context
-   */
-  const id = Math.floor(Math.random() * (100 - 0 + 1)) + 0;
+  // 获取stripe secret
+  const { STRIPE_WEBHOOK_SECRET } = env(context);
+  try {
+    // 获取数据库
+    const db = context.get('db');
+    // const stripe = context.get('stripe');
+    // const signature = context.req.raw.headers.get("stripe-signature");
+    // if (!signature) {
+    //   return context.text("", 400);
+    // }
+    // const body = await context.req.text();
+    // const event = await stripe.webhooks.constructEventAsync(
+    //   body,
+    //   signature,
+    //   STRIPE_WEBHOOK_SECRET
+    // );
+    const event = await context.req.json();
+    const id = event.id;
+    const deviceId = event.data.object.client_reference_id;
+    let licenseKey = '';
+    switch (event.type) {
+      case "payment_intent.created": {
+        // 获取激活码
+        const response = await fetch(`https://generater.luoyutao1028.workers.dev/encrypt?deviceId=${deviceId}`);
+        const license = await response.text();
+        licenseKey = license;
+        // 支付成功，存储至D1数据库
+        await db.prepare(
+          "INSERT INTO [order] (id, order_id, device_id, order_info, license) VALUES (?, ?, ?, ?, ?)"
+        ).bind(id, id, deviceId, JSON.stringify(event.data.object), license).run();
+      }
+      default:
+        break
+    }
+    return context.json({ licenseKey, deviceId, id, type: event.type }, 200)
+  } catch (error) {
+    const errorMessage = `⚠️  Webhook signature verification failed. ${err instanceof Error ? err.message : "Internal server error"}`
+    console.log(errorMessage);
+    return context.text(errorMessage, 400);
+  }
+})
+
+app.post('/v1/checkPay/', async (context) => {
   try {
     const db = context.get('db');
-    await db.prepare(
-      "INSERT INTO [order] (id, order_id, device_id, order_info) VALUES (?, ?, ?, ?)"
-    ).bind(id, "测试id", "测试id", STRIPE_WEBHOOK_SECRET).run();
-    return context.text('成功了吗', 200)
 
   } catch (error) {
-    return context.text(`报错了,${error.message}`)
+
   }
-  // const stripe = context.get('stripe');
-  // const signature = context.req.raw.headers.get("stripe-signature");
-  // try {
-  //   if (!signature) {
-  //     return context.text("", 400);
-  //   }
-  //   const body = await context.req.text();
-  //   const event = await stripe.webhooks.constructEventAsync(
-  //     body,
-  //     signature,
-  //     STRIPE_WEBHOOK_SECRET
-  //   );
-  //   switch (event.type) {
-  //     case "payment_intent.created": {
-  //       console.log(event.data.object)
-  //       break
-  //     }
-  //     default:
-  //       break
-  //   }
-  //   return context.text("", 200);
-  // } catch (err) {
-  //   const errorMessage = `⚠️  Webhook signature verification failed. ${err instanceof Error ? err.message : "Internal server error"}`
-  //   console.log(errorMessage);
-  //   return context.text(errorMessage, 400);
-  // }
 })
 
 export default app;
