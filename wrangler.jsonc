@@ -1,6 +1,6 @@
 {
   "name": "wapilot-stripe",
-  "compatibility_date": "2025-11-11",
+  "compatibility_date": "2025-11-17",
   "observability": {
     "enabled": false,
     "head_sampling_rate": 1,
