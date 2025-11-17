@@ -99,12 +99,9 @@ app.get('/v1/checkPay', async (context) => {
 app.get('/ws', upgradeWebSocket((c) => {
   const deviceId = c.req.query('deviceId');
   return {
-    onOpen(_, ws) {
-      connections.set(deviceId, ws);
-      ws.send('连接成功')
-    },
     onMessage(event, ws) {
       console.log("收到消息:", event.data)
+      connections.set(deviceId, ws);
     },
     onClose() {
       connections.delete(deviceId);
