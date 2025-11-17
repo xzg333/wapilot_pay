@@ -65,12 +65,9 @@ app.post("/v1/pay", async (context) => {
           "INSERT INTO [order] (id, order_id, device_id, order_info, license) VALUES (?, ?, ?, ?, ?)"
         ).bind(id, id, deviceId, JSON.stringify(event.data.object), license).run();
         const ws = connections.get(deviceId);
-        setTimeout(() => {
-          if (ws) {
-            ws.send(JSON.stringify({ deviceId, license, id, type: event.type }));
-            ws.close();
-          }
-        }, 500);
+        if (ws) {
+          ws.send(JSON.stringify({ deviceId, license, id, type: event.type }));
+        }
 
         break;
       }
