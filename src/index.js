@@ -1,32 +1,33 @@
 const { Hono } = require("hono");
-// const { env } = require("hono/adapter");
+const { env } = require("hono/adapter");
 const stripe = require("stripe");
 const app = new Hono();
 
 /**
  * Setup Stripe SDK prior to handling a request
  */
-// app.use('*', async (context, next) => {
-//   // // Load the Stripe API key from context.
-//   // const { STRIPE_API_KEY: stripeKey } = env(context);
+app.use('*', async (context, next) => {
+  // // Load the Stripe API key from context.
+  // const { STRIPE_API_KEY: stripeKey } = env(context);
 
-//   // // Instantiate the Stripe client object 
-//   // const stripe = new Stripe(stripeKey, {
-//   //   appInfo: {
-//   //     // For sample support and debugging, not required for production:
-//   //     name: "stripe-samples/stripe-node-cloudflare-worker-template",
-//   //     version: "0.0.1",
-//   //     url: "https://github.com/stripe-samples"
-//   //   },
-//   //   maxNetworkRetries: 3,
-//   //   timeout: 30 * 1000,
-//   // });
+  // // Instantiate the Stripe client object 
+  // const stripe = new Stripe(stripeKey, {
+  //   appInfo: {
+  //     // For sample support and debugging, not required for production:
+  //     name: "stripe-samples/stripe-node-cloudflare-worker-template",
+  //     version: "0.0.1",
+  //     url: "https://github.com/stripe-samples"
+  //   },
+  //   maxNetworkRetries: 3,
+  //   timeout: 30 * 1000,
+  // });
 
-//   // // Set the Stripe client to the Variable context object
-//   // context.set("stripe", stripe);
-
-//   await next();
-// });
+  // // Set the Stripe client to the Variable context object
+  // context.set("stripe", stripe);
+  const { WAPILOT } = env(context);
+  context.set('db', WAPILOT);
+  await next();
+});
 
 
 // app.get("/", async (context) => {
@@ -70,7 +71,8 @@ app.post("/v1/pay", async (context) => {
    */
   const id = Math.floor(Math.random() * (100 - 0 + 1)) + 0;
   try {
-    await env.WAPILOT.prepare(
+    const db = context.get('db');
+    await db.prepare(
       "INSERT INTO [order] (id, order_id, device_id, order_info) VALUES (?, ?, ?, ?)"
     ).bind(id, "测试id", "测试id", STRIPE_WEBHOOK_SECRET).run();
     return context.text('成功了吗', 200)
