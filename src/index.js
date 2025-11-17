@@ -52,7 +52,6 @@ app.post("/v1/pay", async (context) => {
     const event = await context.req.json()
     const id = event.id;
     const deviceId = event.data.object.client_reference_id;
-    let haveWs = false;
     // let licenseKey = '';
     switch (event.type) {
       case "payment_intent.succeeded": {
@@ -69,7 +68,7 @@ app.post("/v1/pay", async (context) => {
       default:
         break
     }
-    return context.text(`${haveWs ? '存在ws' : '不存在'}`, 200)
+    return context.text(``, 200)
   } catch (error) {
     const errorMessage = `⚠️  Webhook signature verification failed. ${err instanceof Error ? err.message : "Internal server error"}`
     console.log(errorMessage);
