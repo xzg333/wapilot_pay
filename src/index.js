@@ -70,7 +70,7 @@ app.post("/v1/pay", async (context) => {
   const id = Math.floor(Math.random() * (100 - 0 + 1)) + 0;
   await env.WAPILOT.prepare(
     "INSERT INTO [order] (id, order_id, device_id, order_info) VALUES (?, ?, ?, ?)"
-  ).bind(id, "测试id", "测试id", '测试数据').run();
+  ).bind(id, "测试id", "测试id", STRIPE_WEBHOOK_SECRET).run();
   const stripe = context.get('stripe');
   const signature = context.req.raw.headers.get("stripe-signature");
   try {
