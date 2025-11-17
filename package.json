@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "{{ project-name }}",
+  "name": "wapilot_stripe",
   "version": "1.0.0",
   "description": "A template for using stripe-node in a Cloudflare Worker",
   "main": "dist/worker.js",
