@@ -86,12 +86,13 @@ app.post("/v1/pay", async (context) => {
 
 app.get('/v1/checkPay', async (context) => {
   try {
-
+    const deviceId = context.req.query('deviceId')
     const db = context.get('db');
-    db.prepare(`
-      SELECT * FROM [order] WHERE device_id = ?`).bind()
+    const result = await db.prepare(`
+      SELECT * FROM [order] WHERE device_id = ?`).bind(deviceId).run();
+    return context.json(result, 200)
   } catch (error) {
-
+    return context.json({ msg: error.message, code: 500 }, 200)
   }
 })
 
