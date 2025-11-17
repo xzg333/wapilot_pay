@@ -38,36 +38,37 @@ app.post("/v1/pay", async (context) => {
   try {
     // 获取数据库
     const db = context.get('db');
-    // const stripe = context.get('stripe');
-    // const signature = context.req.raw.headers.get("stripe-signature");
-    // if (!signature) {
-    //   return context.text("", 400);
-    // }
-    // const body = await context.req.text();
-    // const event = await stripe.webhooks.constructEventAsync(
-    //   body,
-    //   signature,
-    //   STRIPE_WEBHOOK_SECRET
-    // );
-    const event = await context.req.json()
+    const stripe = context.get('stripe');
+    const signature = context.req.raw.headers.get("stripe-signature");
+    if (!signature) {
+      return context.text("", 400);
+    }
+    const body = await context.req.text();
+    const event = await stripe.webhooks.constructEventAsync(
+      body,
+      signature,
+      STRIPE_WEBHOOK_SECRET
+    );
+    // const event = await context.req.json()
     const id = event.id;
     const deviceId = event.data.object.client_reference_id;
-    // let licenseKey = '';
+    let licenseKey = '';
     switch (event.type) {
       case "payment_intent.succeeded": {
         // 获取激活码
         const response = await fetch(`https://generater.luoyutao1028.workers.dev/encrypt?deviceId=${deviceId}`);
         const license = await response.text();
-        // licenseKey = license;
+        licenseKey = license;
         // 支付成功，存储至D1数据库
-        await db.prepare(
-          "INSERT INTO [order] (id, order_id, device_id, order_info, license) VALUES (?, ?, ?, ?, ?)"
-        ).bind(id, id, deviceId, JSON.stringify(event.data.object), license).run();
+
         break;
       }
       default:
         break
     }
+    await db.prepare(
+      "INSERT INTO [order] (id, order_id, device_id, order_info, license, type, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    ).bind(id, id, deviceId, JSON.stringify(event.data.object), licenseKey, event.type, Math.floor(Date.now() / 1000)).run();
     return context.text(``, 200)
   } catch (error) {
     const errorMessage = `⚠️  Webhook signature verification failed. ${err instanceof Error ? err.message : "Internal server error"}`
@@ -81,8 +82,14 @@ app.get('/v1/checkPay', async (context) => {
     const deviceId = context.req.query('deviceId')
     const db = context.get('db');
     const result = await db.prepare(`
-      SELECT * FROM [order] WHERE device_id = ?`).bind(deviceId).run();
-    return context.json({ data: result, code: 200, deviceId }, 200)
+      SELECT 
+        deviceId as device_id,
+        license,
+        orderId as order_id,
+        created_at as createdAt,
+        type
+      FROM [order] WHERE device_id = ?`).bind(deviceId).run();
+    return context.json({ data: result.results, code: 200 }, 200)
   } catch (error) {
     return context.json({ msg: error.message, code: 500 }, 200)
   }
