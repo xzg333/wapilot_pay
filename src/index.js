@@ -101,7 +101,8 @@ app.get('/ws', upgradeWebSocket((c) => {
   return {
     onMessage(event, ws) {
       console.log("收到消息:", event.data)
-      connections.set(deviceId, ws);
+      if (!connections.get(deviceId))
+        connections.set(deviceId, ws);
     },
     onClose() {
       connections.delete(deviceId);
