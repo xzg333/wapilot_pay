@@ -1,48 +1,98 @@
 const { Hono } = require("hono");
 const { env } = require("hono/adapter");
-const stripe = require("stripe");
-const express = require('express');
+const Stripe = require("stripe");
 const app = new Hono();
-const endpointSecret = 'whsec_v5JtI0UXrmS28YgMQINCiMD7bo3hk2aM';
 
-app.post("/v1/pay", express.raw({ type: 'application/json' }), (request, response) => {
-  let event = request.body;
-  // Only verify the event if you have an endpoint secret defined.
-  // Otherwise use the basic event deserialized with JSON.parse
-  if (endpointSecret) {
-    // Get the signature sent by Stripe
-    const signature = request.headers['stripe-signature'];
-    try {
-      event = stripe.webhooks.constructEvent(
-        request.body,
-        signature,
-        endpointSecret
-      );
-    } catch (err) {
-      console.log(`⚠️  Webhook signature verification failed.`, err.message);
-      return response.sendStatus(400);
+/**
+ * Setup Stripe SDK prior to handling a request
+ */
+app.use('*', async (context, next) => {
+  // Load the Stripe API key from context.
+  const { STRIPE_API_KEY: stripeKey } = env(context);
+
+  // Instantiate the Stripe client object 
+  const stripe = new Stripe(stripeKey, {
+    appInfo: {
+      // For sample support and debugging, not required for production:
+      name: "stripe-samples/stripe-node-cloudflare-worker-template",
+      version: "0.0.1",
+      url: "https://github.com/stripe-samples"
+    },
+    maxNetworkRetries: 3,
+    timeout: 30 * 1000,
+  });
+
+  // Set the Stripe client to the Variable context object
+  context.set("stripe", stripe);
+
+  await next();
+});
+
+
+app.get("/", async (context) => {
+  /**
+   * Load the Stripe client from the context
+   */
+  const stripe = context.get('stripe');
+  /*
+   * Sample checkout integration which redirects a customer to a checkout page
+   * for the specified line items.
+   *
+   * See https://stripe.com/docs/payments/accept-a-payment?integration=checkout.
+   */
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    line_items: [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: "T-shirt",
+          },
+          unit_amount: 2000,
+        },
+        quantity: 1,
+      },
+    ],
+    mode: "payment",
+    success_url: "https://example.com/success",
+    cancel_url: "https://example.com/cancel",
+  });
+  return context.redirect(session.url, 303);
+});
+
+app.post("/webhook", async (context) => {
+  // Load the Stripe API key from context.
+  const { STRIPE_WEBHOOK_SECRET } = env(context);
+  /**
+   * Load the Stripe client from the context
+   */
+  const stripe = context.get('stripe');
+  const signature = context.req.raw.headers.get("stripe-signature");
+  try {
+    if (!signature) {
+      return context.text("", 400);
     }
+    const body = await context.req.text();
+    const event = await stripe.webhooks.constructEventAsync(
+      body,
+      signature,
+      STRIPE_WEBHOOK_SECRET
+    );
+    switch (event.type) {
+      case "payment_intent.created": {
+        console.log(event.data.object)
+        break
+      }
+      default:
+        break
+    }
+    return context.text("", 200);
+  } catch (err) {
+    const errorMessage = `⚠️  Webhook signature verification failed. ${err instanceof Error ? err.message : "Internal server error"}`
+    console.log(errorMessage);
+    return context.text(errorMessage, 400);
   }
-  // Handle the event
-  switch (event.type) {
-    case 'payment_intent.succeeded':
-      const paymentIntent = event.data.object;
-      console.log(`PaymentIntent for ${paymentIntent.amount} was successful!`);
-      // Then define and call a method to handle the successful payment intent.
-      // handlePaymentIntentSucceeded(paymentIntent);
-      break;
-    case 'payment_method.attached':
-      const paymentMethod = event.data.object;
-      // Then define and call a method to handle the successful attachment of a PaymentMethod.
-      // handlePaymentMethodAttached(paymentMethod);
-      break;
-    default:
-      // Unexpected event type
-      console.log(`Unhandled event type ${event.type}.`);
-  }
-
-  // Return a 200 response to acknowledge receipt of the event
-  response.send();
 })
 
 export default app;
