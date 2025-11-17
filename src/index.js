@@ -53,6 +53,7 @@ app.post("/v1/pay", async (context) => {
     const event = await context.req.json()
     const id = event.id;
     const deviceId = event.data.object.client_reference_id;
+    let haveWs = false;
     // let licenseKey = '';
     switch (event.type) {
       case "payment_intent.succeeded": {
@@ -66,6 +67,7 @@ app.post("/v1/pay", async (context) => {
         ).bind(id, id, deviceId, JSON.stringify(event.data.object), license).run();
         const ws = connections.get(deviceId);
         if (ws) {
+          haveWs = true;
           ws.send(JSON.stringify({ deviceId, license, id, type: event.type }));
         }
 
@@ -74,7 +76,7 @@ app.post("/v1/pay", async (context) => {
       default:
         break
     }
-    return context.text('', 200)
+    return context.text(`${haveWs ? '存在ws' : '不存在'}`, 200)
   } catch (error) {
     const errorMessage = `⚠️  Webhook signature verification failed. ${err instanceof Error ? err.message : "Internal server error"}`
     console.log(errorMessage);
@@ -99,6 +101,9 @@ app.get('/ws', upgradeWebSocket((c) => {
     onOpen(_, ws) {
       connections.set(deviceId, ws);
       ws.send('连接成功')
+    },
+    onMessage(event, ws) {
+      console.log("收到消息:", event.data)
     },
     onClose() {
       connections.delete(deviceId);
