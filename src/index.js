@@ -1,28 +1,27 @@
 
 const { Hono } = require("hono");
 const { env } = require("hono/adapter");
-const Stripe = require("stripe");
+const stripe = require("stripe");
 const app = new Hono();
 
-const connections = new Map();
 /**
  * Setup Stripe SDK prior to handling a request
  */
 app.use('*', async (context, next) => {
   // Load the Stripe API key from context.
-  const { STRIPE_API_KEY: stripeKey } = env(context);
+  // const { STRIPE_API_KEY: stripeKey } = env(context);
 
-  // Instantiate the Stripe client object 
-  const stripe = new Stripe(stripeKey, {
-    appInfo: {
-      // For sample support and debugging, not required for production:
-      name: "stripe-samples/stripe-node-cloudflare-worker-template",
-      version: "0.0.1",
-      url: "https://github.com/stripe-samples"
-    },
-    maxNetworkRetries: 3,
-    timeout: 30 * 1000,
-  });
+  // // Instantiate the Stripe client object 
+  // const stripe = new Stripe(stripeKey, {
+  //   appInfo: {
+  //     // For sample support and debugging, not required for production:
+  //     name: "stripe-samples/stripe-node-cloudflare-worker-template",
+  //     version: "0.0.1",
+  //     url: "https://github.com/stripe-samples"
+  //   },
+  //   maxNetworkRetries: 3,
+  //   timeout: 30 * 1000,
+  // });
 
   // Set the Stripe client to the Variable context object
   context.set("stripe", stripe);
